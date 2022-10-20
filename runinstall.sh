@@ -1,13 +1,22 @@
 sudo apt-get update
 sudo apt-get upgrade -y
 
-sudo add-apt-repository ppa:webupd8team/java
 sudo apt-get update
-sudo apt-get install oracle-java8-installer
-sudo update-alternatives --config java
-sudo vim /etc/environment
-
-sudo apt-get install tomcat7
+sudo apt-get install default-jdk
 
 echo "Install MySQL"
-sudo apt-get install mysql-server
+
+sudo apt-get install mysql-server -y
+
+echo "Start Mysql"
+sudo systemctl start mysql
+
+echo "Login"
+sudo mysql -u root create "db"
+
+JVM="-server -Xms2048m -Xmx2048m -XX:PermSize=1024M -XX:MaxNewSize=512"
+start(){
+
+ java $JVM -jar webapp-1.0-SNAPSHOT.jar
+
+}
