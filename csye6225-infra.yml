@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: The template creates a VPC, in which cotains 3 public subnets spread across 3 different zones with the internet gateway and route table
+Description: The template creates a VPC, in which cotains 3 public subnets spread across 3 different zones with the internet gateway and route table, and EC2 instance lauched by VPC
 Parameters:
   VpcName:
     Description: VPC Name
@@ -25,6 +25,16 @@ Parameters:
     Description: Enter the IP Range (CIDR Notation) for the subnet in AZ 3
     Type: String
     Default: 10.0.3.0/24
+
+  AMI:
+    Description: "AMI"
+    Type: String
+    Default: ami-03700ff39c6789d3e
+
+  KeyName:
+    Description: "Key Name"
+    Type: String
+    Default: testKey
 
 Resources:
   VPC:
@@ -116,4 +126,71 @@ Resources:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet3
 
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      KeyName: !Ref KeyName
+      InstanceType: "t2.micro"
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeType: "gp2"
+            DeleteOnTermination: "false"
+            VolumeSize: "60"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeleteOnTermination: "true"
+          SubnetId: !Ref Subnet1
+          DeviceIndex: "0"
+          GroupSet: !Ref ApplicationSecurityGroup
 
