@@ -7,20 +7,44 @@ packer {
   }
 }
 
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
+
+variable "source_ami" {
+  type    = string
+  default = "ami-08c40ec9ead489470" # Ubuntu 22.04 LTS
+}
+
+variable "ssh_username" {
+  type    = string
+  default = "ubuntu"
+}
+
 source "amazon-ebs" "ubuntu" {
-  ami_name      = ${var.ami_prefix}-${local.timestamp}"
-  instance_type = "t2.micro"
-  region        = "us-east-1"
-  source_ami_filter {
-    filters = {
-      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220912"
-      root-device-type    = "ebs"
-      virtualization-type = "hvm"
-    }
-    most_recent = true
-    owners      = ["099720109477"]
+  region          = "${var.aws_region}"
+  ami_name        = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
+  ami_description = "AMI for CSYE 6225"
+  ami_regions = [
+    "us-east-1",
+  ]
+
+  aws_polling {
+    delay_seconds = 120
+    max_attempts  = 50
   }
-  ssh_username = "ubuntu"
+
+  instance_type = "t2.micro"
+  source_ami    = "${var.source_ami}"
+  ssh_username  = "${var.ssh_username}"
+
+  launch_block_device_mappings {
+    delete_on_termination = true
+    device_name           = "/dev/sda1"
+    volume_size           = 8
+    volume_type           = "gp2"
+  }
 }
 
 build {
@@ -28,11 +52,14 @@ build {
     "source.amazon-ebs.ubuntu"
   ]
 
+  provisioner "file" {
+    source      = "target/webapp-1.0-SNAPSHOT.jar"
+    destination = "~/webapp-1.0-SNAPSHOT.jar"
+  }
+
   provisioner "shell" {
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive",
-      "CHECKPOINT_DISABLE=1"
+    scripts = [
+        "runinstall.sh"
     ]
-    script = "./script.sh"
   }
 }
