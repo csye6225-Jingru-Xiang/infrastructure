@@ -1,12 +1,15 @@
-# infrastructure
-This assignment will focus on setting up our networking resources such as Virtual Private Cloud (VPC), Internet Gateway, Route Tables, and Routes. We will use AWS CloudFormation for infrastructure setup and tear down.
-
-# Prerequisite
-AWS CLI with 2 new profiles
-
 # Tasks
-1. Created a Stack using Amazon CloudFormation
-2. Deleted a Stack using Amazon CloudFormation
+1. Building Custom Application AMI using Packer
+2. Bootstrapping Database, App Demo using AMI & Infrastructure as Code w/ CloudFormation
+3. GitHub Action CI/CD
+
+# Packer
+1. packer init .
+2. packer fmt .
+3. packer validate .
+4. export AWS_ACCESS_KEY_ID="{YOUR_AWS_ACCESS_KEY_ID}"
+5. export AWS_SECRET_ACCESS_KEY="{YOUR_ AWS_SECRET_ACCESS_KEY}"
+6. packer build aws-ubuntu.pkr.hcl
 
 # Steps
 1.  In project, run 'aws cloudformation create-stack \--stack-name my-stack-3 \--template-body file://csye6225-infra.yml \--profile demo \--region=us-east-1'

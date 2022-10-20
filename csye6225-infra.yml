@@ -29,12 +29,10 @@ Parameters:
   AMI:
     Description: "AMI"
     Type: String
-    Default: ami-03700ff39c6789d3e
 
   KeyName:
     Description: "Key Name"
     Type: String
-    Default: testKey
 
 Resources:
   VPC:
@@ -186,7 +184,7 @@ Resources:
           Ebs:
             VolumeType: "gp2"
             DeleteOnTermination: "false"
-            VolumeSize: "60"
+            VolumeSize: "50"
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeleteOnTermination: "true"
