@@ -16,3 +16,4 @@
 2.  Use 'aws cloudformation describe-stacks \--stack-name my-stack-3' to check whether stack is created successfully.
 3.  Run 'aws cloudformation delete-stack \--stack-name my-stack-3 \--region us-east-1' to delete stack.
 
+check actions
