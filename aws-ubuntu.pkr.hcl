@@ -53,7 +53,8 @@ build {
   ]
 
   provisioner "file" {
-    source      = "target/webapp-1.0-SNAPSHOT.jar"
+
+    source      = "webapp-1.0-SNAPSHOT.jar"
     destination = "~/webapp-1.0-SNAPSHOT.jar"
   }
 
