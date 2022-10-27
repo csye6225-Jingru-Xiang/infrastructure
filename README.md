@@ -1,7 +1,7 @@
 # Tasks
 1. Building Custom Application AMI using Packer
 2. Bootstrapping Database, App Demo using AMI & Infrastructure as Code w/ CloudFormation
-3. GitHub Action CI/CD.
+3. GitHub Action CI/CD..
 
 # Packer
 1. packer init .
