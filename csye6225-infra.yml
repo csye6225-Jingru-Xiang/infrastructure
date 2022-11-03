@@ -36,6 +36,10 @@ Parameters:
     Description: "Private S3 bucket name"
     Type: String
     Default: xjrbucket
+  HostedZone:
+    Description: "Hosted zone for DNS"
+    Type: String
+    Default: rubyxjr.me.
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -339,6 +343,16 @@ Resources:
       Path: /
       Roles:
         - !Ref IAMRoleForS3
+  SiteDomainName:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Ref HostedZone
+      RecordSets:
+        - Name: "rubyxjr.me"
+          Type: A
+          TTL: 60
+          ResourceRecords:
+            - !GetAtt EC2InstanceDev.PublicIp
 Outputs:
   VpcId:
     Description: "The VPC ID"
