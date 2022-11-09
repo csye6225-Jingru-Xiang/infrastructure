@@ -39,7 +39,7 @@ Parameters:
   HostedZone:
     Description: "Hosted zone for DNS"
     Type: String
-    Default: rubyxjr.me.
+    Default: prod.rubyxjr.me.
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -244,6 +244,12 @@ Resources:
             sudo echo 'DB_ENDPOINT=${DBEndpoint}'  >> ./app.conf
             sudo systemctl daemon-reload
             sudo systemctl start app
+            sudo cp /home/ubuntu/cloudwatch.json /opt/cloudwatch-config.json
+            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+              -a fetch-config \
+              -m ec2 \
+              -c file:/opt/cloudwatch-config.json \
+              -s
           - DBEndpoint: !GetAtt RDSInstance.Endpoint.Address
   S3PrivateBucket:
     Type: AWS::S3::Bucket
@@ -316,7 +322,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Action: ["s3:*"]
+          - Action: ["s3:*Object", "s3:ListBucket"]
             Effect: Allow
             Resource:
               - !Join ["", ["arn:aws:s3:::", !Ref S3PrivateBucket]]
@@ -336,6 +342,9 @@ Resources:
             Action:
               - "sts:AssumeRole"
       RoleName: EC2-CSYE6225
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   IAMInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -348,7 +357,7 @@ Resources:
     Properties:
       HostedZoneName: !Ref HostedZone
       RecordSets:
-        - Name: "rubyxjr.me"
+        - Name: "prod.rubyxjr.me"
           Type: A
           TTL: 60
           ResourceRecords:
