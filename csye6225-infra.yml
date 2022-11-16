@@ -410,7 +410,7 @@ Resources:
               Message: {
                 Body: {
                   Text: {
-                    Data: `Click the link below to verify your email address: http://prod.rubyxjr.me/v1/verifyUserEmail?email=${username}&token=${one_time_token}`,
+                    Data: `Click the link below to verify your email address: http://prod.rubyxjr.me/v2/verifyUserEmail?email=${username}&token=${one_time_token}`,
                   },
                 },
                 Subject: { Data: "Email Verification" },
