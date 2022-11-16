@@ -362,6 +362,137 @@ Resources:
           TTL: 60
           ResourceRecords:
             - !GetAtt EC2InstanceDev.PublicIp
+  IAMPolicyForEC2ToPublishSNS:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CSYE6225-EC2-SNS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: [ "sns:Publish" ]
+            Effect: Allow
+            Resource: !Ref SNSForEmailVerification
+      Roles:
+        - !Ref IAMRoleForS3
+  IAMPolicyForEC2DynamoDB:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CSYE6225-EC2-Dynamo
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: [ "dynamodb:Get*", "dynamodb:List*", "dynamodb:PutItem" ]
+            Effect: Allow
+            Resource: !GetAtt DynamoDBForOneTimeToken.Arn
+      Roles:
+        - !Ref IAMRoleForS3
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: IAMRoleForLambdaFunction
+    Properties:
+      Role: !GetAtt IAMRoleForLambdaFunction.Arn
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Timeout: 30
+      FunctionName: csye6225-email-verification
+      Code:
+        ZipFile: |
+          const aws = require("aws-sdk");
+          const ses = new aws.SES({ region: "us-east-1" });
+          exports.handler = async function (event) {
+            const message = JSON.parse(event.Records[0].Sns.Message);
+            console.log("Message received from SNS:", message);
+            const { username, one_time_token } = message;
+            const params = {
+              Destination: {
+                ToAddresses: [username],
+              },
+              Message: {
+                Body: {
+                  Text: {
+                    Data: `Click the link below to verify your email address: http://prod.rubyxjr.me/v1/verifyUserEmail?email=${username}&token=${one_time_token}`,
+                  },
+                },
+                Subject: { Data: "Email Verification" },
+              },
+              Source: "no-reply@prod.rubyxjr.me",
+            };
+            return ses.sendEmail(params).promise();
+          };
+  SNSForEmailVerification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: csye6225-email-verification
+      FifoTopic: 'false'
+      Subscription:
+        - Endpoint: arn:aws:lambda:us-east-1:873250706640:function:csye6225-email-verification
+          Protocol: lambda
+  SNSSubscriptionLambda:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNSForEmailVerification
+      Protocol: LAMBDA
+      Endpoint: !GetAtt LambdaFunction.Arn
+  IAMRoleForLambdaFunction:
+    Type: AWS::IAM::Role
+    Description: Permission to write Amazon CloudWatch Logs
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      RoleName: lambda-role
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  IAMPolicyForLambdaSES:
+    Type: AWS::IAM::Policy
+    DependsOn: IAMRoleForLambdaFunction
+    Properties:
+      PolicyName: CSYE6225-Lambda-SES
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: [ "ses:SendEmail", "ses:SendRawEmail" ]
+            Effect: Allow
+            Resource: "*"
+      Roles:
+        - !Ref IAMRoleForLambdaFunction
+  LambdaFunctionAlias:
+    Type: AWS::Lambda::Alias
+    DependsOn: LambdaFunction
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      FunctionVersion: $LATEST
+      Name: !Join [ "", [ !Ref LambdaFunction, "-alias" ] ]
+  LambdaFunctionSNSTrigger:
+    Type: AWS::Lambda::Permission
+    DependsOn: LambdaFunction
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref SNSForEmailVerification
+  DynamoDBForOneTimeToken:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: "user_details"
+      AttributeDefinitions:
+        - AttributeName: "Email"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Email"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TimeToLiveSpecification:
+        AttributeName: "ExpireTime"
+        Enabled: true
 Outputs:
   VpcId:
     Description: "The VPC ID"
