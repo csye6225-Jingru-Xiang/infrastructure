@@ -410,7 +410,14 @@ Resources:
               Message: {
                 Body: {
                   Text: {
-                    Data: `Click the link below to verify your email address: http://prod.rubyxjr.me:8080/v2/verifyUserEmail?email=${username}&token=${one_time_token}`,
+                    Data:
+                    `<h3>Hi ${username}!</h3>
+                     <br/>
+                     <p>Click the link below to verify your email address:
+                     <a href="http://prod.rubyxjr.me:8080/v2/verifyUserEmail?email=${username}&token=${one_time_token}" "target="_blank">http://prod.rubyxjr.me:8080/v2/verifyUserEmail?email=${username}&token=${one_time_token}</a>
+                     <p>
+                     <br/>
+                     Thank You!`
                   },
                 },
                 Subject: { Data: "Email Verification" },
@@ -491,7 +498,7 @@ Resources:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
       TimeToLiveSpecification:
-        AttributeName: "ExpireTime"
+        AttributeName: "Ttl"
         Enabled: true
 Outputs:
   VpcId:
