@@ -40,6 +40,10 @@ Parameters:
     Description: "Hosted zone for DNS"
     Type: String
     Default: prod.rubyxjr.me.
+  AccountId:
+    Description: "Amazon Account ID"
+    Type: String
+    Default: 873250706640
   SSLCertificateArn:
     Description: "SSL Certificate for domain"
     Type: String
@@ -366,8 +370,29 @@ Resources:
       Timeout: 30
       FunctionName: csye6225-email-verification
       Code:
-        S3Bucket: csye6225-serverless-bucket
-        S3Key: emailVerification.js
+        ZipFile: |
+          const aws = require("aws-sdk");
+          const ses = new aws.SES({ region: "us-east-1" });
+          exports.handler = async function (event) {
+            const message = JSON.parse(event.Records[0].Sns.Message);
+            console.log("Message received from SNS:", message);
+            const { username, one_time_token } = message;
+            const params = {
+              Destination: {
+                ToAddresses: [username],
+              },
+              Message: {
+                Body: {
+                  Text: {
+                    Data: `Click the link below to verify your email address: http://prod.rubyxjr.me:8080/v2/verifyUserEmail?email=${username}&token=${one_time_token}`,
+                  },
+                },
+                Subject: { Data: "Email Verification" },
+              },
+              Source: "no-reply@prod.rubyxjr.me",
+            };
+            return ses.sendEmail(params).promise();
+          };
   SNSForEmailVerification:
     Type: AWS::SNS::Topic
     Properties:
@@ -456,15 +481,15 @@ Resources:
             Ebs:
               VolumeSize: 50
               VolumeType: "gp2"
-              DeleteOnTermination: true
+              DeleteOnTermination: false
               Encrypted: true
               KmsKeyId: !GetAtt KMSKeyForEncryptedEBS.Arn
         ImageId: !Ref AMI
-        IamInstanceProfile: !Ref IAMInstanceProfile
+        IamInstanceProfile:
+          Arn: !GetAtt IAMInstanceProfile.Arn
         InstanceType: t2.micro
         KeyName: dev-ec2
         SecurityGroupIds: [ !Ref WebAppSecurityGroup ]
-        AssociatePublicIpAddress: true
         UserData:
           Fn::Base64: !Sub
             - |
@@ -501,7 +526,7 @@ Resources:
       HealthCheckType: EC2
       LaunchTemplate:
         LaunchTemplateId: !Ref AsgLaunchTemplate
-        Version: !GetAtt asgLaunchTemplate.LatestVersionNumber
+        Version: !GetAtt AsgLaunchTemplate.LatestVersionNumber
       MaxSize: '3'
       MinSize: '1'
       NewInstancesProtectedFromScaleIn: false
@@ -532,36 +557,36 @@ Resources:
       ScalingAdjustment: -1
   CPUAlarmHigh:
     Type: AWS::CloudWatch::Alarm
-      Properties:
-        AlarmDescription: Average CPU usage > 5%
-        MetricName: CPUUtilization
-        Namespace: AWS/EC2
-        Statistic: Average
-        Period: 60
-        EvaluationPeriods: 1
-        Threshold: 5
-        AlarmActions:
-          - !Ref AsgUPPolicy
-        Dimensions:
-          - Name: AutoScalingGroupName
-            Value: !Ref AsgWebApp
-        ComparisonOperator: GreaterThanThreshold
+    Properties:
+      AlarmDescription: Average CPU usage > 5%
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 5
+      AlarmActions:
+        - !Ref AsgUPPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AsgWebApp
+      ComparisonOperator: GreaterThanThreshold
   CPUAlarmLow:
     Type: AWS::CloudWatch::Alarm
-      Properties:
-        AlarmDescription: Average CPU usage < 3%
-        MetricName: CPUUtilization
-        Namespace: AWS/EC2
-        Statistic: Average
-        Period: 60
-        EvaluationPeriods: 1
-        Threshold: 3
-        AlarmActions:
-          - !Ref AsgDownPolicy
-        Dimensions:
-          - Name: AutoScalingGroupName
-            Value: !Ref AsgWebApp
-        ComparisonOperator: LessThanThreshold
+    Properties:
+      AlarmDescription: Average CPU usage < 3%
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      AlarmActions:
+        - !Ref AsgDownPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AsgWebApp
+      ComparisonOperator: LessThanThreshold
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     DependsOn: InternetGatewayAttachment
@@ -650,13 +675,15 @@ Resources:
           - Sid: Enable IAM policies
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: "kms:*"
             Resource: "*"
           - Sid: Allow service-linked role use of the customer managed key
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
             Action:
               - "kms:Encrypt"
               - "kms:Decrypt"
@@ -667,7 +694,8 @@ Resources:
           - Sid: Allow service-linked role use of the customer managed key
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
             Action:
               - "kms:CreateGrant"
             Resource: "*"
@@ -704,9 +732,6 @@ Outputs:
   SecurityGroupId:
     Description: "EC2 Security Group Id for AMI"
     Value: !Ref WebAppSecurityGroup
-  EC2InstanceId:
-    Description: "EC2 Instance ID"
-    Value: !Ref EC2InstanceDev
   PrivateSubnet1Id:
     Description: "Private Subnet 1 ID"
     Value: !Ref PrivateSubnet1
