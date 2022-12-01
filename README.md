@@ -7,3 +7,9 @@
 2.  Use 'aws cloudformation describe-stacks \--stack-name my-stack-3' to check whether stack is created successfully.
 3.  Run 'aws cloudformation delete-stack \--stack-name my-stack-3 \--region us-east-1' to delete stack.
 
+# How to Import SSL Certification
+1.  Download certificate "rubyxjr_me.crt" and certificate chain "rubyxjr_me.ca-bundle"
+2.  Move "private.key" into the same directory
+3.  Run "aws acm import-certificate --certificate fileb://rubyxjr_me.crt \
+               --certificate-chain fileb://rubyxjr_me.ca-bundle \
+               --private-key fileb://private.key --region us-east-1"
